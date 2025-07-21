@@ -1,9 +1,9 @@
 ## Smart Helmet Detection System for Bike Riders ##
-Author: Balasuriyage Don Stephan Kanishka Balasuriya (Index: 220056X)
-University: University of Moratuwa, Sri Lanka
-Department: Computer Science & Engineering (ICE Stream)
-Course: Semester 5 - Embedded Systems Project
-Supervisor: [Supervisor's Name]
+- Author: Balasuriyage Don Stephan Kanishka Balasuriya (Index: 220056X)
+- University: University of Moratuwa, Sri Lanka
+- Department: Computer Science & Engineering (ICE Stream)
+- Course: Semester 5 - Embedded Systems Project
+- Supervisor: [Supervisor's Name]
 
 ### 📌 Overview
 ### This project implements a Smart Helmet Detection System to enforce helmet compliance among bike riders. The system ensures:
