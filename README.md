@@ -39,8 +39,9 @@
 - Wireless Communication: RF/NRF24L01/BLE module to transmit data to the bike unit
 
 ### 📅 Project Timeline
-Week	    Task
- 1        Identify the project scope and finalize the project idea
- 2        Research & Identify hardware components
+| **Week**    | **Task**                                                   |
+|-------------|------------------------------------------------------------|
+|    1        | Identify the project scope and finalize the project idea   |
+|    2        | Research & Identify hardware components                    |
 
 ### 📂 Repository Structure --(not yet)--
