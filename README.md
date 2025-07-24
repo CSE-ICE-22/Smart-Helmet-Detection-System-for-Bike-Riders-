@@ -27,7 +27,7 @@
 
 ### 🛠 Hardware & Software Components  -- (not yet confirm)--
 #### 🖥️ Main System (Bike Unit)
-- Microcontroller: ESP32/Arduino/Raspberry Pi
+- Microcontroller: ESP32/Raspberry Pi
 - Camera/Sensor: IR sensor or small camera module for helmet detection
 - Buckle Detection: Magnetic sensor or pressure switch
 - Ignition Control: Relay module to cut off ignition
