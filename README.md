@@ -6,7 +6,7 @@
 - Supervisor: [Supervisor's Name]
 
 ### 📌 Overview
-### This project implements a Smart Helmet Detection System to enforce helmet compliance among bike riders. The system ensures:
+#### This project implements a Smart Helmet Detection System to enforce helmet compliance among bike riders. The system ensures:
 - Helmet Detection (whether the rider is wearing the helmet)
 - Buckle Detection (whether the helmet strap is properly fastened)
 - Ignition Control (bike won’t start unless the helmet is worn and buckled)
@@ -38,5 +38,8 @@
 - Buckle Sensor: Piezo sensor or Magnet sensor or Hall effect sensor for buckle status
 - Wireless Communication: BLE to transmit data to the bike unit
 
-
+### 🧱 Architecture Diagram
+<img src=".\images\high level functional block.png" alt="High Level System Architecture" width="700"/>
+<img src=".\images\Helmet Unit.png" alt="Helmet Unit" width="700"/>
+<img src=".\images\Bike Unit.png" alt="Bike Unit" width="700"/>
 ### 📂 Repository Structure --(not yet)--
