@@ -27,21 +27,16 @@
 
 ### 🛠 Hardware & Software Components  -- (not yet confirm)--
 #### 🖥️ Main System (Bike Unit)
-- Microcontroller: ESP32/Raspberry Pi
-- Camera/Sensor: IR sensor or small camera module for helmet detection
-- Buckle Detection: Magnetic sensor or pressure switch
+- Microcontroller: ESP32
 - Ignition Control: Relay module to cut off ignition
 - Alert System: Buzzer & LED indicators
+- Detect that Rider get off from bike: Stand sensor
 
 #### ⛑ Helmet Unit
-- Helmet Detection: Accelerometer/IR sensor to detect wearing status(not yet confirm)
-- Buckle Sensor: Reed switch or Hall effect sensor for buckle status
-- Wireless Communication: RF/NRF24L01/BLE module to transmit data to the bike unit
+- Microcontroller: ESP32 c3 super mini
+- Helmet Detection: Piezo sensor and Bioelectric EMG or Capacitive touch sensor to detect wearing status
+- Buckle Sensor: Piezo sensor or Magnet sensor or Hall effect sensor for buckle status
+- Wireless Communication: BLE to transmit data to the bike unit
 
-### 📅 Project Timeline
-| **Week**    | **Task**                                                   |
-|-------------|------------------------------------------------------------|
-|    1        | Identify the project scope and finalize the project idea   |
-|    2        | Research & Identify hardware components                    |
 
 ### 📂 Repository Structure --(not yet)--
