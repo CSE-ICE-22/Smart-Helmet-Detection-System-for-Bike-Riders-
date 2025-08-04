@@ -9,7 +9,7 @@
 #### This project implements a Smart Helmet Detection System to enforce helmet compliance among bike riders. The system integrates both helmet-based and bike-based sensors to ensure that the rider wears and fastens the helmet properly before and during the ride. It also monitors the rider's actions after the ride to enforce post-ride safety behavior. The system ensures:
 - Helmet Detection (whether the rider is wearing the helmet)
 - Buckle Detection (whether the helmet strap is properly fastened)
-- Engine ON Detection via Ignition Wire Tap (Detetct that bike is start)
+- Engine ON Detection via Ignition Wire Tap (Detect that bike is start)
 - Ignition Control (bike won’t start unless the helmet is worn and buckled)
 - Real-time Alerts (warnings if the helmet is removed mid-ride)
 - Post-Ride Safety Check (alarm if the rider dismounts without removing the helmet)
