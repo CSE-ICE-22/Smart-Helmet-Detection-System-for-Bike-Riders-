@@ -43,7 +43,7 @@
 - ESP32-C3 Super Mini
 ##### Sensors:
 - Helmet Detection:
-    - Piezo Sensor (detects pressure when helmet is worn)
+    - Piezo Sensor/ Pressure Sensors (Force-Sensitive Resistors - FSRs) (detects pressure when helmet is worn)
     - Capacitive Touch Sensor (detects contact with head/skin)
 - Buckle Detection:
     - Magnet Sensor, Reed Switch, or Piezo Sensor for detecting strap connection
