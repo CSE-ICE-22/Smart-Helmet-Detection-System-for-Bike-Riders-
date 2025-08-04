@@ -29,8 +29,7 @@
 ### 🛠 Hardware & Software Components  -- (not yet confirm)--
 #### 🖥️ Main System (Bike Unit)
 ##### Microcontrollers:
-- Raspberry Pi (Primary logic and communication hub)
-- ESP32 (Secondary controller for real-time hardware I/O)
+- Raspberry Pi or ESP32 
 ##### Sensors & Components:
 - Pressure Sensor (FSR or Load Cell) – Detects rider presence on seat
 - Stand Sensor – Detects whether the bike stand is deployed
