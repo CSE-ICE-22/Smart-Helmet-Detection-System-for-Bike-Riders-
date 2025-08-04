@@ -58,4 +58,4 @@
 <img src=".\images\high level functional block.png" alt="High Level System Architecture" width="700"/>
 <img src=".\images\Helmet Unit.png" alt="Helmet Unit" width="700"/>
 <img src=".\images\Bike Unit.png" alt="Bike Unit" width="700"/>
-### 📂 Repository Structure --(not yet)--
+
