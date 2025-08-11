@@ -48,6 +48,27 @@ class MyServerCallbacks: public BLEServerCallbacks {
     }
 };
 
+class MyCallbacks: public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic *pCharacteristic) {
+    std::string rxValue = pCharacteristic->getValue();
+
+    if (rxValue.length() > 0) {
+      Serial.print("Received Value: ");
+      for (int i = 0; i < rxValue.length(); i++)
+        Serial.print(rxValue[i]);
+
+      Serial.println();
+
+      // Optionally, process the received value here
+      // For example, you can check for a command string
+      if (rxValue == "LED_ON") {
+        Serial.println("Turn LED ON command received");
+        // digitalWrite(LED_PIN, HIGH);
+      }
+    }
+  }
+};
+
 
 
 void setup() {
@@ -78,6 +99,8 @@ Notifications are unacknowledged — the client does not send back a confirmatio
 // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
   // Create a BLE Descriptor
   pCharacteristic->addDescriptor(new BLE2902());
+  // Set callback to handle writes
+pCharacteristic->setCallbacks(new MyCallbacks());
   
   pCharacteristic->setValue("Hello this is Helmet Unit");
   // Start the service
@@ -95,7 +118,7 @@ Notifications are unacknowledged — the client does not send back a confirmatio
 void loop() {
     // notify changed value
     if (deviceConnected) {
-        pCharacteristic->setValue((uint8_t*)&value, 4);
+        pCharacteristic->setValue("Hello this is Helmet Unit");
         pCharacteristic->notify();
         value++;
         delay(3); // bluetooth stack will go into congestion, if too many packets are sent, in 6 hours test i was able to go as low as 3ms
