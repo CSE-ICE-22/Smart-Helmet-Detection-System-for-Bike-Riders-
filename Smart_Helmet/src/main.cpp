@@ -1,25 +1,4 @@
-#include<Arduino.h>
-/*
-    Video: https://www.youtube.com/watch?v=oCMOYS71NIU
-    Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleNotify.cpp
-    Ported to Arduino ESP32 by Evandro Copercini
-    updated by chegewara
-
-   Create a BLE server that, once we receive a connection, will send periodic notifications.
-   The service advertises itself as: 4fafc201-1fb5-459e-8fcc-c5c9c331914b
-   And has a characteristic of: beb5483e-36e1-4688-b7f5-ea07361b26a8
-
-   The design of creating the BLE server is:
-   1. Create a BLE Server
-   2. Create a BLE Service
-   3. Create a BLE Characteristic on the Service
-   4. Create a BLE Descriptor on the characteristic
-   5. Start the service.
-   6. Start advertising.
-
-   A connect hander associated with the server starts a background task that performs notification
-   every couple of seconds.
-*/
+#include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -31,60 +10,48 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 uint32_t value = 0;
 
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
-
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-
+// Callback for server connection events
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
-    };
-
+      Serial.println("Device connected");
+    }
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
+      Serial.println("Device disconnected");
     }
 };
 
-class MyCallbacks: public BLECharacteristicCallbacks {
+// Callback for characteristic write events
+// Callback for receiving data
+class MyCallbacks : public BLECharacteristicCallbacks {
+  String receivedValue;
   void onWrite(BLECharacteristic *pCharacteristic) {
     std::string rxValue = pCharacteristic->getValue();
 
     if (rxValue.length() > 0) {
-      Serial.print("Received Value: ");
-      for (int i = 0; i < rxValue.length(); i++)
-        Serial.print(rxValue[i]);
-
-      Serial.println();
-
-      // Optionally, process the received value here
-      // For example, you can check for a command string
-      if (rxValue == "LED_ON") {
-        Serial.println("Turn LED ON command received");
-        // digitalWrite(LED_PIN, HIGH);
+      receivedValue = "";
+      for (int i = 0; i < rxValue.length(); i++) {
+        receivedValue += rxValue[i];
       }
+      Serial.print("Received: ");
+      Serial.println(receivedValue);
     }
   }
 };
 
-
-
 void setup() {
   Serial.begin(115200);
 
-  // Create the BLE Device
   BLEDevice::init("ESP32");
-
-  // Create the BLE Server
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
-  // Create the BLE Service
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
-  // Create a BLE Characteristic
   pCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID,
                       BLECharacteristic::PROPERTY_READ   |
@@ -92,25 +59,27 @@ void setup() {
                       BLECharacteristic::PROPERTY_NOTIFY |
                       BLECharacteristic::PROPERTY_INDICATE
                     );
-/*The server (your ESP32 device) can send notifications to the client when the value changes.
-Notifications are unacknowledged — the client does not send back a confirmation.The client must subscribe to notifications to receive them.*/
-  
+  // Add BLE2902 descriptor to enable notifications
+  BLEDescriptor *pDescr;
+  pDescr = new BLEDescriptor(BLEUUID((uint16_t)0x2901));//Creates a new descriptor with the UUID 0x2901, which is the "Characteristic User Description" descriptor.
+  pDescr->setValue("Helmet Unit");
 
-// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
-  // Create a BLE Descriptor
-  pCharacteristic->addDescriptor(new BLE2902());
-  // Set callback to handle writes
-pCharacteristic->setCallbacks(new MyCallbacks());
-  
+
+  // pCharacteristic->addDescriptor(new BLE2902());
+  BLE2902* pBLE2902;
+  pBLE2902 = new BLE2902(); //Creates a new BLE2902 descriptor. This is the Client Characteristic Configuration Descriptor (CCCD), required for notifications/indications.
+  pBLE2902->setNotifications(true);
+  pCharacteristic->addDescriptor(pDescr);
+  pCharacteristic->addDescriptor(pBLE2902);
   pCharacteristic->setValue("Hello this is Helmet Unit");
-  // Start the service
+  pCharacteristic->setCallbacks(new MyCallbacks()); 
+
   pService->start();
 
-  // Start advertising
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // set value to 0x00 to not advertise this parameter
+  pAdvertising->setMinPreferred(0x06);
   BLEDevice::startAdvertising();
   Serial.println("Waiting a client connection to notify...");
 }
@@ -118,21 +87,24 @@ pCharacteristic->setCallbacks(new MyCallbacks());
 void loop() {
     // notify changed value
     if (deviceConnected) {
-        pCharacteristic->setValue("Hello this is Helmet Unit");
+        // pCharacteristic->setValue("Hello this is Helmet Unit");
+        std::string message = "Hello this is Helmet Unit";
+        pCharacteristic->setValue(value);
+        Serial.print("Sending Value: ");   
+        Serial.println(value);
         pCharacteristic->notify();
         value++;
-        delay(3); // bluetooth stack will go into congestion, if too many packets are sent, in 6 hours test i was able to go as low as 3ms
+        delay(1000);
     }
     // disconnecting
     if (!deviceConnected && oldDeviceConnected) {
-        delay(500); // give the bluetooth stack the chance to get things ready
-        pServer->startAdvertising(); // restart advertising
+        delay(500);
+        pServer->startAdvertising();
         Serial.println("start advertising");
         oldDeviceConnected = deviceConnected;
     }
     // connecting
     if (deviceConnected && !oldDeviceConnected) {
-        // do stuff here on connecting
         oldDeviceConnected = deviceConnected;
     }
 }
