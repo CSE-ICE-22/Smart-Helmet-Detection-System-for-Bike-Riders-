@@ -29,7 +29,10 @@ static void notifyCallback(
     Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
     Serial.print(" of data length ");
     Serial.println(length);
-    Serial.print("data: ");
+    uint32_t counter = pData[0];
+    for (int i = 1;i<length;i++) counter =counter| (pData[i] << (i*8));
+
+      Serial.print("data: ");
     Serial.println((char*)pData);
 }
 
