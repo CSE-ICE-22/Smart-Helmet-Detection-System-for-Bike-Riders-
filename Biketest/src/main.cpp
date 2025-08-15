@@ -4,12 +4,14 @@
 #include <BLEDevice.h>
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHAR_UUID_TX        "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define CHAR_UUID_RX        "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+#define CHAR_UUID_TX        "beb5483e-36e1-4688-b7f5-ea07361b26a8" // Helmet → Bike
+#define CHAR_UUID_RX        "6e400002-b5a3-f393-e0a9-e50e24dcca9e" // Bike → Helmet
+
+#define STAND_PIN 26   // Stand sensor pin
 
 static BLEUUID serviceUUID(SERVICE_UUID);
 static BLEUUID txUUID(CHAR_UUID_TX);
-static BLEUUID rxUUID(CHAR_UUID_RX);
+static BLEUUID rxUUID(CHAR_UUID_RX); //This creates an object of type BLEUUID named rxUUID.
 
 static boolean doConnect = false;
 static boolean connected = false;
@@ -32,6 +34,8 @@ void notifyCallback(
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
         if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID)) {
+            Serial.printf("Advertised Device %s \n");
+            BLEDevice::getScan()->stop();
             myDevice = new BLEAdvertisedDevice(advertisedDevice);
             doConnect = true;
         }
@@ -55,12 +59,13 @@ bool connectToServer() {
 
 void setup() {
     Serial.begin(115200);
+    pinMode(STAND_PIN, INPUT);
     BLEDevice::init("BikeUnit");
 
     BLEScan* pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
     pBLEScan->setActiveScan(true);
-    pBLEScan->start(5, false);
+    pBLEScan->start(20, false);
 }
 
 void loop() {
