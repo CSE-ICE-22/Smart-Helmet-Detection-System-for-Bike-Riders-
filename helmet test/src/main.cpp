@@ -9,7 +9,7 @@
 
 #define FSR_PIN 34
 #define TOUCH_PIN 4
-#define BUTTON_PIN 15   // push button to enable pairing
+#define BUTTON_PIN 15   // push button to enable/disable pairing
 
 BLECharacteristic *txCharacteristic;
 BLECharacteristic *rxCharacteristic;
@@ -18,6 +18,7 @@ BLEAdvertising *pAdvertising;
 
 bool deviceConnected = false;
 bool isAdvertising = false;   // <--- custom flag
+bool lastButtonState = HIGH;
 
 class ServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {

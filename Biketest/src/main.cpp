@@ -12,13 +12,24 @@ static BLEAdvertisedDevice* myDevice;
 
 bool connected = false;
 bool doConnect = false;
+bool doScan = false;
 
+class MyClientCallback : public BLEClientCallbacks {
+  void onConnect(BLEClient* pClient) {
+    Serial.println("Connected to Helmet.");
+  }
+  void onDisconnect(BLEClient* pClient) {
+    connected = false;
+    Serial.println("⚠️ Disconnected from Helmet. Waiting for reconnection...");
+    doScan = true;  // trigger scan again
+  }
+};
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-    Serial.print("BLE Advertised Device found: ");
-    Serial.println(advertisedDevice.toString().c_str());
+    // Serial.print("BLE Advertised Device found: ");
+    // Serial.println(advertisedDevice.toString().c_str());
     if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(BLEUUID(SERVICE_UUID))) {
-      Serial.println("Helmet found!");
+      Serial.println("✅Helmet found!");
       BLEDevice::getScan()->stop();
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect = true;
@@ -28,6 +39,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 bool connectToServer() {
   BLEClient* pClient = BLEDevice::createClient();
+  pClient->setClientCallbacks(new MyClientCallback());
   if (!pClient->connect(myDevice)) return false;
 
   BLERemoteService* pRemoteService = pClient->getService(BLEUUID(SERVICE_UUID));
@@ -49,24 +61,32 @@ void setup() {
   pScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
  
   pScan->setActiveScan(true);
-  pScan->start(20, false);
+  pScan->start(5, false);
 }
 
 void loop() {
   if (doConnect) {
     if (connectToServer()) {
-      Serial.println("Connected to Helmet.");
+      Serial.println("✅ Successfully connected to Helmet.");
     } else {
-      Serial.println("Connection failed.");
+      Serial.println("❌ Connection failed. Will rescan...");
     }
     doConnect = false;
+  }
+
+  if (doScan && !connected) {
+    Serial.println("🔍 Scanning for Helmet...");
+    BLEDevice::getScan()->start(5, false);  // scan for 5 seconds
+    doScan = false;
   }
 
   if (connected) {
     if (digitalRead(STAND_PIN) == HIGH) {
       rxCharacteristic->writeValue("true");
-      Serial.println("Stand sensor TRUE sent to Helmet");
+      Serial.println("📤Stand sensor TRUE sent to Helmet");
     }
     delay(500);
+    } else {
+    delay(1000); // reduce CPU use while waiting
   }
 }
