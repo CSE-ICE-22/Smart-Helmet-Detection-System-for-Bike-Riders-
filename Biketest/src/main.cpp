@@ -26,8 +26,8 @@ class MyClientCallback : public BLEClientCallbacks {
 };
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-    // Serial.print("BLE Advertised Device found: ");
-    // Serial.println(advertisedDevice.toString().c_str());
+    Serial.print("BLE Advertised Device found: ");
+    Serial.println(advertisedDevice.toString().c_str());
     if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(BLEUUID(SERVICE_UUID))) {
       Serial.println("✅Helmet found!");
       BLEDevice::getScan()->stop();
@@ -37,6 +37,17 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   }
 };
 
+static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
+                           uint8_t* pData, size_t length, bool isNotify) {
+  String msg = "";
+  for (size_t i = 0; i < length; i++) msg += (char)pData[i];
+
+  if (msg == "true") {
+    Serial.println("✅ Helmet secure: Worn & Buckled");
+  } else if (msg == "warn") {
+    Serial.println("⚠️ Warning: Helmet not worn or buckle open!");
+  }
+}
 bool connectToServer() {
   BLEClient* pClient = BLEDevice::createClient();
   pClient->setClientCallbacks(new MyClientCallback());
@@ -47,9 +58,16 @@ bool connectToServer() {
 
   txCharacteristic = pRemoteService->getCharacteristic(BLEUUID(CHAR_UUID_TX));
   rxCharacteristic = pRemoteService->getCharacteristic(BLEUUID(CHAR_UUID_RX));
+
+  if (txCharacteristic->canNotify()) {
+    txCharacteristic->registerForNotify(notifyCallback);
+  }
+
   connected = true;
   return true;
 }
+
+
 
 void setup() {
   Serial.begin(115200);

@@ -8,7 +8,8 @@
 #define CHAR_UUID_RX "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 
 #define FSR_PIN 34
-#define TOUCH_PIN 4
+#define TOUCH_PIN 4        // TTP223 touch sensor → HIGH = touched (helmet worn)
+#define BUCKLE_PIN 2       // Buckle switch input (active LOW when buckled)
 #define BUTTON_PIN 15   // push button to enable/disable pairing
 
 BLECharacteristic *txCharacteristic;
@@ -38,6 +39,7 @@ class ServerCallbacks: public BLEServerCallbacks {
 void setup() {
   Serial.begin(115200);
   pinMode(TOUCH_PIN, INPUT);
+  pinMode(BUCKLE_PIN, INPUT_PULLUP);   
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   BLEDevice::init("HelmetUnit");
@@ -75,13 +77,25 @@ void loop() {
 
   
   if (deviceConnected) {
-    int fsrValue = analogRead(FSR_PIN);
-    int touchValue = digitalRead(TOUCH_PIN);
+    // int fsrValue = analogRead(FSR_PIN);
+    // int touchValue = digitalRead(TOUCH_PIN);
 
-    if (fsrValue > 500 && touchValue == HIGH) {
+    // if (fsrValue > 500 && touchValue == HIGH) {
+    //   txCharacteristic->setValue("true");
+    //   txCharacteristic->notify();
+    //   Serial.println("Human detected, sent TRUE to Bike.");
+    // }
+    bool helmetWorn = digitalRead(TOUCH_PIN) == HIGH;  // TTP223
+    bool buckled = digitalRead(BUCKLE_PIN) == LOW;     // active LOW when buckled
+    Serial.printf("helmetWorn: %d, buckled: %d\n", helmetWorn, buckled);
+    if (helmetWorn && buckled) {
       txCharacteristic->setValue("true");
       txCharacteristic->notify();
-      Serial.println("Human detected, sent TRUE to Bike.");
+      Serial.println("✅ Helmet worn & buckled → Sent TRUE to Bike.");
+    } else {
+      txCharacteristic->setValue("warn");
+      txCharacteristic->notify();
+      Serial.println("⚠️ Warning: Helmet not worn OR not buckled → Sent WARN to Bike.");
     }
     delay(500);
   }
