@@ -1,3 +1,4 @@
+
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
@@ -7,10 +8,10 @@
 #define CHAR_UUID_TX "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHAR_UUID_RX "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 
-#define FSR_PIN 34
-#define TOUCH_PIN 10        // TTP223 touch sensor → HIGH = touched (helmet worn)
-#define BUCKLE_PIN 20       // Buckle switch input (active LOW when buckled)
-#define BUTTON_PIN 21      // push button to enable/disable pairing 
+#define FSR_PIN 4 
+#define TOUCH_PIN 5        // TTP223 touch sensor → HIGH = touched (helmet worn)
+#define BUCKLE_PIN 6       // Buckle switch input (active LOW when buckled)
+#define BUTTON_PIN 7      // push button to enable/disable pairing 
 
 
 BLECharacteristic *txCharacteristic;
@@ -38,7 +39,8 @@ class ServerCallbacks: public BLEServerCallbacks {
 };
 
 void setup() {
-  Serial.begin(115200);
+ Serial.begin(115200);
+  Serial.println("Booting Helmet Unit...");
   pinMode(TOUCH_PIN, INPUT);
   pinMode(BUCKLE_PIN, INPUT_PULLUP);   
   pinMode(BUTTON_PIN, INPUT_PULLUP);
