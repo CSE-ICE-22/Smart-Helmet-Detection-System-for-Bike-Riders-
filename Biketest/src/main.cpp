@@ -1,5 +1,10 @@
 #include <Arduino.h>
 #include <BLEDevice.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// Set the LCD address to 0x27 or 0x3F depending on your module
+LiquidCrystal_I2C lcd(0x3F, 16, 2);  
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHAR_UUID_TX "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -71,6 +76,9 @@ bool connectToServer() {
 
 void setup() {
   Serial.begin(115200);
+  Wire.begin(21, 22); // SDA, SCL
+  lcd.init();
+  lcd.backlight();
   pinMode(STAND_PIN, INPUT);
 
   BLEDevice::init("BikeUnit");
@@ -86,8 +94,13 @@ void loop() {
   if (doConnect) {
     if (connectToServer()) {
       Serial.println("✅ Successfully connected to Helmet.");
+      lcd.setCursor(0, 0); // column 0, row 0
+      lcd.print("Helmet connected.");
+      delay(1000);
     } else {
       Serial.println("❌ Connection failed. Will rescan...");
+      lcd.setCursor(0, 0); // column 0, row 0
+      lcd.print("Connection faild.");
     }
     doConnect = false;
   }

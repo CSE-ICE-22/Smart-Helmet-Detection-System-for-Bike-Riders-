@@ -8,7 +8,7 @@
 #define CHAR_UUID_TX "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHAR_UUID_RX "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 
-#define FSR_PIN 4 
+#define FSR_PIN 0 
 #define TOUCH_PIN 5        // TTP223 touch sensor → HIGH = touched (helmet worn)
 #define BUCKLE_PIN 6       // Buckle switch input (active LOW when buckled)
 #define BUTTON_PIN 7      // push button to enable/disable pairing 
@@ -40,6 +40,7 @@ class ServerCallbacks: public BLEServerCallbacks {
 
 void setup() {
  Serial.begin(115200);
+  delay(1000); // wait 1 second to stabilize
   Serial.println("Booting Helmet Unit...");
   pinMode(TOUCH_PIN, INPUT);
   pinMode(BUCKLE_PIN, INPUT_PULLUP);   
@@ -80,25 +81,23 @@ void loop() {
 
   
   if (deviceConnected) {
-    // int fsrValue = analogRead(FSR_PIN);
-    // int touchValue = digitalRead(TOUCH_PIN);
+    bool helmetTouched = (digitalRead(TOUCH_PIN) == HIGH); // TTP223
+    int fsrValue = analogRead(FSR_PIN);                   // FSR
+    bool buckled = (digitalRead(BUCKLE_PIN) == LOW);       // active LOW when buckled
 
-    // if (fsrValue > 500 && touchValue == HIGH) {
-    //   txCharacteristic->setValue("true");
-    //   txCharacteristic->notify();
-    //   Serial.println("Human detected, sent TRUE to Bike.");
-    // }
-    bool helmetWorn = digitalRead(TOUCH_PIN) == HIGH;  // TTP223
-    bool buckled = digitalRead(BUCKLE_PIN) == LOW;     // active LOW when buckled
-    Serial.printf("helmetWorn: %d, buckled: %d\n", helmetWorn, buckled);
-    if (helmetWorn && buckled) {
+    // Debug print
+    Serial.printf("helmetTouched: %d, fsrValue: %d, buckled: %d\n", 
+                  helmetTouched, fsrValue, buckled);
+
+   // Logic: First helmet touch → then FSR → then buckle
+    if (helmetTouched && fsrValue > 500 && buckled) {
       txCharacteristic->setValue("true");
       txCharacteristic->notify();
-      Serial.println("✅ Helmet worn & buckled → Sent TRUE to Bike.");
+      Serial.println("✅ Helmet touch + FSR + buckle → Sent TRUE to Bike.");
     } else {
       txCharacteristic->setValue("warn");
       txCharacteristic->notify();
-      Serial.println("⚠️ Warning: Helmet not worn OR not buckled → Sent WARN to Bike.");
+      Serial.println("⚠️ Warning: Missing condition → Sent WARN to Bike.");
     }
     delay(500);
   }
