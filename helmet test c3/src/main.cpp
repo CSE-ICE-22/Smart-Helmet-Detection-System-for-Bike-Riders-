@@ -24,6 +24,12 @@ bool isAdvertising = false;   // <--- custom flag
 bool lastButtonState = HIGH;
 
 class ServerCallbacks: public BLEServerCallbacks {
+/*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Called when a client (Bike) connects to the server.
+   * @param pServer The BLEServer object.
+   */
+/*******  3aeb4de4-53db-45e9-b0f8-4679048743dc  *******/
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
     Serial.println("Bike connected.");
