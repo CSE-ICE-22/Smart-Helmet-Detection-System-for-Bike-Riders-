@@ -23,10 +23,18 @@ bool lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
 const unsigned long debounceDelay = 300;  // debounce delay in ms
 
+// --- Timing variables ---
+unsigned long bootTime = 0;
+unsigned long connectTime = 0;
+bool connectTimeRecorded = false;
+
 class ServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) override {
     deviceConnected = true;
+    connectTime = millis() - bootTime;  // time from boot to connect
+    connectTimeRecorded = true;
     Serial.println("✅ Bike connected.");
+    Serial.printf("⏱ BLE connection time: %.2f seconds\n", connectTime / 1000.0);
     isAdvertising = false;
   }
 
@@ -40,6 +48,8 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("Booting Helmet Unit...");
+
+  bootTime = millis();  // Record system start time
 
   pinMode(TOUCH_PIN, INPUT);
   pinMode(BUCKLE_PIN, INPUT_PULLUP);
@@ -76,23 +86,25 @@ void loop() {
     lastDebounceTime = millis();
 
     if (!isAdvertising && !deviceConnected) {
-      // Start advertising
       Serial.println("🔵 Button pressed → Start advertising (pairing enabled)");
       pAdvertising->start();
       isAdvertising = true;
+      connectTimeRecorded = false;  // reset timer for new connection
+      bootTime = millis();          // reset base time for timing measurement
+      delay(500);
 
     } else if (isAdvertising) {
-      // Stop advertising
       Serial.println("🟡 Button pressed → Stop advertising");
       pAdvertising->stop();
       isAdvertising = false;
+      delay(500);
 
     } else if (deviceConnected) {
-      // Disconnect BLE client manually
       Serial.println("🔴 Button pressed → Disconnect BLE device");
       pServer->disconnect(pServer->getConnId());
       deviceConnected = false;
       isAdvertising = false;
+      delay(500);
     }
   }
 
