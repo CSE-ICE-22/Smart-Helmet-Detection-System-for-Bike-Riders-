@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
@@ -11,8 +10,7 @@
 #define FSR_PIN 0 
 #define TOUCH_PIN 5        // TTP223 touch sensor → HIGH = touched (helmet worn)
 #define BUCKLE_PIN 6       // Buckle switch input (active LOW when buckled)
-#define BUTTON_PIN 7      // push button to enable/disable pairing 
-
+#define BUTTON_PIN 7       // push button to enable/disable pairing 
 
 BLECharacteristic *txCharacteristic;
 BLECharacteristic *rxCharacteristic;
@@ -20,36 +18,31 @@ BLEServer *pServer;
 BLEAdvertising *pAdvertising;
 
 bool deviceConnected = false;
-bool isAdvertising = false;   // <--- custom flag
+bool isAdvertising = false;
 bool lastButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 300;  // debounce delay in ms
 
 class ServerCallbacks: public BLEServerCallbacks {
-/*************  ✨ Windsurf Command ⭐  *************/
-  /**
-   * Called when a client (Bike) connects to the server.
-   * @param pServer The BLEServer object.
-   */
-/*******  3aeb4de4-53db-45e9-b0f8-4679048743dc  *******/
-  void onConnect(BLEServer* pServer) {
+  void onConnect(BLEServer* pServer) override {
     deviceConnected = true;
-    Serial.println("Bike connected.");
-    isAdvertising = false;  // stop flag when connected
+    Serial.println("✅ Bike connected.");
+    isAdvertising = false;
   }
-  void onDisconnect(BLEServer* pServer) {
+
+  void onDisconnect(BLEServer* pServer) override {
     deviceConnected = false;
-    Serial.println("Bike disconnected.");
-    // Restart advertising automatically
-    pAdvertising->start();
-    isAdvertising = true;
+    Serial.println("❌ Bike disconnected.");
   }
 };
 
 void setup() {
- Serial.begin(115200);
-  delay(1000); // wait 1 second to stabilize
+  Serial.begin(115200);
+  delay(1000);
   Serial.println("Booting Helmet Unit...");
+
   pinMode(TOUCH_PIN, INPUT);
-  pinMode(BUCKLE_PIN, INPUT_PULLUP);   
+  pinMode(BUCKLE_PIN, INPUT_PULLUP);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   BLEDevice::init("HelmetUnit");
@@ -61,42 +54,60 @@ void setup() {
   txCharacteristic = pService->createCharacteristic(
     CHAR_UUID_TX, BLECharacteristic::PROPERTY_NOTIFY
   );
-
   rxCharacteristic = pService->createCharacteristic(
     CHAR_UUID_RX, BLECharacteristic::PROPERTY_WRITE
   );
 
-  // Start the service
   pService->start();
 
-  // Create advertiser and add service UUID
   pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
 
-
-  Serial.println("Helmet ready. Press button to enable pairing.");
+  Serial.println("Helmet ready. Press button to start/stop pairing.");
 }
 
 void loop() {
-  // Start advertising only if button pressed & not already advertising
-  if (digitalRead(BUTTON_PIN) == LOW && !isAdvertising) {
-    Serial.println("Button pressed → start advertising for pairing");
-    pAdvertising->start();
-    isAdvertising = true;
+  bool currentButtonState = digitalRead(BUTTON_PIN);
+
+  // Detect button press (active LOW) with debounce
+  if (currentButtonState == LOW && lastButtonState == HIGH && 
+      (millis() - lastDebounceTime) > debounceDelay) {
+
+    lastDebounceTime = millis();
+
+    if (!isAdvertising && !deviceConnected) {
+      // Start advertising
+      Serial.println("🔵 Button pressed → Start advertising (pairing enabled)");
+      pAdvertising->start();
+      isAdvertising = true;
+
+    } else if (isAdvertising) {
+      // Stop advertising
+      Serial.println("🟡 Button pressed → Stop advertising");
+      pAdvertising->stop();
+      isAdvertising = false;
+
+    } else if (deviceConnected) {
+      // Disconnect BLE client manually
+      Serial.println("🔴 Button pressed → Disconnect BLE device");
+      pServer->disconnect(pServer->getConnId());
+      deviceConnected = false;
+      isAdvertising = false;
+    }
   }
 
-  
-  if (deviceConnected) {
-    bool helmetTouched = (digitalRead(TOUCH_PIN) == HIGH); // TTP223
-    int fsrValue = analogRead(FSR_PIN);                   // FSR
-    bool buckled = (digitalRead(BUCKLE_PIN) == LOW);       // active LOW when buckled
+  lastButtonState = currentButtonState;
 
-    // Debug print
-    Serial.printf("helmetTouched: %d, fsrValue: %d, buckled: %d\n", 
+  // Helmet logic (only active when connected)
+  if (deviceConnected) {
+    bool helmetTouched = (digitalRead(TOUCH_PIN) == HIGH);
+    int fsrValue = analogRead(FSR_PIN);
+    bool buckled = (digitalRead(BUCKLE_PIN) == LOW);
+
+    Serial.printf("helmetTouched: %d, fsrValue: %d, buckled: %d\n",
                   helmetTouched, fsrValue, buckled);
 
-   // Logic: First helmet touch → then FSR → then buckle
-    if (helmetTouched && fsrValue > 500 && buckled) {
+    if (helmetTouched && fsrValue > 50 && buckled) {
       txCharacteristic->setValue("true");
       txCharacteristic->notify();
       Serial.println("✅ Helmet touch + FSR + buckle → Sent TRUE to Bike.");

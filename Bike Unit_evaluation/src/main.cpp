@@ -1,5 +1,9 @@
 #include <Arduino.h>
 #include <BLEDevice.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x3F, 16, 2);  
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHAR_UUID_TX "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -21,13 +25,12 @@ class MyClientCallback : public BLEClientCallbacks {
   void onDisconnect(BLEClient* pClient) {
     connected = false;
     Serial.println("⚠️ Disconnected from Helmet. Waiting for reconnection...");
-    doScan = true;  // trigger scan again
+    doScan = true;
   }
 };
+
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
-    // Serial.print("BLE Advertised Device found: ");
-    // Serial.println(advertisedDevice.toString().c_str());
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
     if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(BLEUUID(SERVICE_UUID))) {
       Serial.println("✅Helmet found!");
       BLEDevice::getScan()->stop();
@@ -36,6 +39,28 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     }
   }
 };
+
+static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
+                           uint8_t* pData, size_t length, bool isNotify) {
+  unsigned long receiptTime = millis();  // Time notification received
+
+  String msg = "";
+  for (size_t i = 0; i < length; i++) msg += (char)pData[i];
+
+  if (msg == "true") {
+    Serial.println("✅ Helmet secure: Worn & Buckled");
+    lcd.setCursor(0, 1);
+    lcd.print("Helmet Secure   ");
+  } else if (msg == "warn") {
+    Serial.println("⚠️ Warning: Helmet not worn or buckle open!");
+    lcd.setCursor(0, 1);
+    lcd.print("Helmet Warning! ");
+  }
+
+  // Assume helmet logs send time; compute delta manually or sync clocks.
+  // For simplicity, log receipt time; calculate end-to-end offline.
+  Serial.printf("Notification received: %s, Receipt Time: %lu ms\n", msg.c_str(), receiptTime);
+}
 
 bool connectToServer() {
   BLEClient* pClient = BLEDevice::createClient();
@@ -47,19 +72,26 @@ bool connectToServer() {
 
   txCharacteristic = pRemoteService->getCharacteristic(BLEUUID(CHAR_UUID_TX));
   rxCharacteristic = pRemoteService->getCharacteristic(BLEUUID(CHAR_UUID_RX));
+
+  if (txCharacteristic->canNotify()) {
+    txCharacteristic->registerForNotify(notifyCallback);
+  }
+
   connected = true;
   return true;
 }
 
 void setup() {
   Serial.begin(115200);
+  Wire.begin(21, 22);
+  lcd.init();
+  lcd.backlight();
   pinMode(STAND_PIN, INPUT);
 
   BLEDevice::init("BikeUnit");
 
   BLEScan* pScan = BLEDevice::getScan();
   pScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
- 
   pScan->setActiveScan(true);
   pScan->start(5, false);
 }
@@ -68,15 +100,20 @@ void loop() {
   if (doConnect) {
     if (connectToServer()) {
       Serial.println("✅ Successfully connected to Helmet.");
+      lcd.setCursor(0, 0);
+      lcd.print("Helmet connected.");
+      delay(1000);
     } else {
       Serial.println("❌ Connection failed. Will rescan...");
+      lcd.setCursor(0, 0);
+      lcd.print("Connection faild.");
     }
     doConnect = false;
   }
 
   if (doScan && !connected) {
     Serial.println("🔍 Scanning for Helmet...");
-    BLEDevice::getScan()->start(5, false);  // scan for 5 seconds
+    BLEDevice::getScan()->start(5, false);
     doScan = false;
   }
 
@@ -86,7 +123,7 @@ void loop() {
       Serial.println("📤Stand sensor TRUE sent to Helmet");
     }
     delay(500);
-    } else {
-    delay(1000); // reduce CPU use while waiting
+  } else {
+    delay(1000);
   }
 }

@@ -1,0 +1,10 @@
+File,Section,Avg_FSR,Max_FSR,Min_FSR,Helmet_Detected_%,Buckle_Detected_%
+helmet_data_1,Helmet worn Not buckled,1069.225,1961,376,100.0,0.0
+helmet_data_1,Helmet worn and buckled,1071.7,1197,606,100.0,100.0
+helmet_data_1,Helmet remove and Not Bucked,4.775,28,0,0.0,0.0
+helmet_data_2,Helmet worn Not buckled,1326.2622950819673,2246,0,93.44262295081968,0.0
+helmet_data_2,Helmet worn and buckled,1566.9354838709678,1767,1065,100.0,100.0
+helmet_data_2,Helmet remove and Not Bucked,3.3285714285714287,8,0,0.0,0.0
+helmet_data_3,Helmet worn Not buckled,1035.176923076923,1709,493,88.46153846153845,0.0
+helmet_data_3,Helmet worn and buckled,1292.2561983471073,1404,983,100.0,100.0
+helmet_data_3,Helmet remove and Not Bucked,3.7115384615384617,42,0,0.0,0.0
