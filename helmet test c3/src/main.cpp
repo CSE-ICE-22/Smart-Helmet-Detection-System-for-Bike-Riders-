@@ -123,7 +123,13 @@ void loop() {
       txCharacteristic->setValue("true");
       txCharacteristic->notify();
       Serial.println("✅ Helmet touch + FSR + buckle → Sent TRUE to Bike.");
-    } else {
+    } 
+    else if(helmetTouched && fsrValue > 50 && !buckled){
+      txCharacteristic->setValue("warn_notbuckeld");
+      txCharacteristic->notify();
+      Serial.println("⚠️ Warning: Missing condition → Sent WARN to Bike.");
+    }
+    else {
       txCharacteristic->setValue("warn");
       txCharacteristic->notify();
       Serial.println("⚠️ Warning: Missing condition → Sent WARN to Bike.");
