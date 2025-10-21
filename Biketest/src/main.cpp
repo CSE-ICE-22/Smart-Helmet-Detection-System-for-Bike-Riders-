@@ -2,6 +2,8 @@
 #include <BLEDevice.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+// #include "esp_sleep.h"
+#include "driver/rtc_io.h"
 
 // I2C LCD Setup
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
@@ -15,8 +17,13 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define IGNITION_PIN 25 
 // BUZZER_PIN: Output pin for the warning buzzer (HIGH = ON, LOW = OFF)
 #define BUZZER_PIN 27   
+
 #define BLE_red 2
 #define BLE_green 4
+
+// Assuming Starter switch is HIGH when ON (to simulate a wake-up event)
+#define STARTER_WAKEUP_PIN 32 // Choose an RTC GPIO pin (e.g., GPIO 32)
+#define WAKEUP_TRIGGER_LEVEL 1 // Wake up on HIGH (Starter ON)
 
 // --- BLE SERVICE DEFINITIONS (Must match the Helmet Unit) ---
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -48,6 +55,42 @@ const long warningDuration60s = 60000; // 1 minute
 // BLE Disconnect Grace Period Timer
 unsigned long disconnectStartTime = 0;
 const long disconnectGracePeriod = 60000; // 60 seconds for BLE=0 shutdown
+
+// --- HIBERNATION/Deep Sleep Timer ---
+unsigned long starterOffTime = 0;
+const long hibernationDelayMs = 80000; // 80 seconds before going to sleep
+
+// ---------------- Helper Function to Check Wakeup Reason ----------------
+void print_wakeup_reason() {
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
+    Serial.println("Wakeup caused by Starter Switch (EXT0)");
+  } else {
+    Serial.println("Normal boot (Power-On Reset or other reason)");
+  }
+}
+
+// ---------------- Deep Sleep Function ----------------
+void enterDeepSleep() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Entering Deep Sleep");
+  lcd.setCursor(0, 1);
+  lcd.print("Wake on GPIO ");
+  lcd.print(STARTER_WAKEUP_PIN);
+  Serial.println("Going to Deep Sleep now for 80s timer or Starter Switch Wakeup...");
+
+  // 1. Configure external wake-up source (Starter Switch)
+  // The ESP32 will only wake up if the pin is driven to the specified level (HIGH in this case)
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)STARTER_WAKEUP_PIN, WAKEUP_TRIGGER_LEVEL); 
+
+  // 2. Isolate/Disable unused RTC GPIOs for lowest power (optional but recommended)
+  // rtc_gpio_isolate(GPIO_NUM_...); 
+
+  // 3. Start deep sleep
+  esp_deep_sleep_start();
+  // The code will not execute beyond this point until a wake-up event occurs and the chip reboots.
+}
 
 // ---------------- BLE Client Callback ----------------
 class MyClientCallback : public BLEClientCallbacks {
@@ -162,6 +205,9 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("Bike Unit Booting");
 
+  // Check and print the wake-up reason
+  print_wakeup_reason();
+  
   pinMode(BLE_red, OUTPUT);
   pinMode(BLE_green, OUTPUT);
   digitalWrite(BLE_red, HIGH);
@@ -171,6 +217,13 @@ void setup() {
   pinMode(STAND_PIN, INPUT_PULLUP); 
   pinMode(RIDING_PIN, INPUT_PULLUP);
 
+  // New: Initialize Starter Pin as Input
+  // NOTE: External pull-down/pull-up may be needed depending on your starter switch wiring.
+  // We use the internal pull-down for this example, assuming the starter is wired to 3.3V when ON.
+  rtc_gpio_init((gpio_num_t)STARTER_WAKEUP_PIN);
+  rtc_gpio_set_direction((gpio_num_t)STARTER_WAKEUP_PIN, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_pulldown_en((gpio_num_t)STARTER_WAKEUP_PIN);
+  rtc_gpio_pullup_dis((gpio_num_t)STARTER_WAKEUP_PIN); // Ensure only pull-down is active
   // Initialize Output Pins
   pinMode(IGNITION_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
@@ -185,10 +238,40 @@ void setup() {
   BLEScan* pScan = BLEDevice::getScan();
   pScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pScan->setActiveScan(true);
+
+  // **CRITICAL INITIAL CHECK**
+  // If the starter is ON at boot, we clear the hibernation timer right away.
+  if (digitalRead(STARTER_WAKEUP_PIN) == HIGH) {
+      starterOffTime = 0;
+      Serial.println("Starter ON at boot. Hibernation timer cleared.");
+  }
 }
 
 // ---------------- Main Loop ----------------
 void loop() {
+  // ---  Starter Switch & Hibernation Logic ---
+  // Read the state of the starter switch
+  // NOTE: digitalRead() works for RTC GPIOs after boot, but rtc_gpio_get_level() is also an option.
+  bool isStarterOn = (digitalRead(STARTER_WAKEUP_PIN) == HIGH); 
+  
+  if (isStarterOn) {
+    // Starter is ON: Clear the hibernation timer
+    starterOffTime = 0; 
+  } else {
+    // Starter is OFF: Start the timer if it hasn't been started
+    if (starterOffTime == 0) {
+      Serial.println("Starter OFF. Starting 80s hibernation timer.");
+      starterOffTime = millis();
+    } 
+    
+    // Check if 80 seconds have elapsed since Starter was turned OFF
+    if (millis() - starterOffTime >= hibernationDelayMs) {
+      enterDeepSleep(); // Enter Deep Sleep (Hibernation)
+    }
+    
+    // While waiting for hibernation, or if Starter is OFF and the bike is supposed to be shut down, 
+    // we can still run the connection/safety logic to allow the system to complete its shutdown sequence
+  }
   // --- A. Connection Management ---
   if (doConnect) {
     lcd.clear();
